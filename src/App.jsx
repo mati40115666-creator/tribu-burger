@@ -458,14 +458,16 @@ function Hero() {
           {config.name}
         </h1>
 
-        <div className="flex items-center gap-3 mt-4">
-          <span className="w-10 h-px bg-gradient-to-r from-transparent to-amber-700" />
-          <SunGlyph size={14} color="#b45309" opacity={0.9} />
-          <p className="text-[10px] md:text-xs tracking-[0.35em] text-amber-300/70 uppercase font-semibold">
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <div className="flex items-center gap-2 w-full justify-center">
+            <span className="flex-1 max-w-[40px] h-px bg-gradient-to-r from-transparent to-amber-700" />
+            <SunGlyph size={14} color="#b45309" opacity={0.9} />
+            <SunGlyph size={14} color="#b45309" opacity={0.9} />
+            <span className="flex-1 max-w-[40px] h-px bg-gradient-to-l from-transparent to-amber-700" />
+          </div>
+          <p className="text-[10px] md:text-xs tracking-[0.25em] text-amber-300/70 uppercase font-semibold text-center px-4">
             {config.tagline}
           </p>
-          <SunGlyph size={14} color="#b45309" opacity={0.9} />
-          <span className="w-10 h-px bg-gradient-to-l from-transparent to-amber-700" />
         </div>
 
         <div className="flex items-center gap-2 mt-5 text-amber-200/50 text-xs">
@@ -638,10 +640,10 @@ function CategoryBanner({ name, color, isOpen, onToggle }) {
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
           }}
         />
-        <div className="relative flex items-center gap-3">
-          <span style={{ color: s.text }} className="text-lg">▶▶▶</span>
+        <div className="relative flex items-center gap-3 min-w-0 flex-1">
+          <span className="hidden sm:block h-px w-8 flex-shrink-0" style={{ background: `linear-gradient(to right, transparent, ${s.text}88)` }} />
           <h2
-            className="text-xl md:text-2xl tracking-[0.15em]"
+            className="text-lg md:text-2xl tracking-[0.1em] md:tracking-[0.15em] truncate"
             style={{
               fontFamily: "'Alfa Slab One', serif",
               color: s.text,
@@ -650,7 +652,7 @@ function CategoryBanner({ name, color, isOpen, onToggle }) {
           >
             {name}
           </h2>
-          <span style={{ color: s.text }} className="text-lg">◀◀◀</span>
+          <span className="hidden sm:block h-px w-8 flex-shrink-0" style={{ background: `linear-gradient(to left, transparent, ${s.text}88)` }} />
         </div>
         <ChevronDown
           className="relative w-5 h-5 transition-transform duration-300"
@@ -1581,7 +1583,7 @@ export default function App() {
   const liveZones        = appData?.zones         || defaultZones;
   // ──────────────────────────────────────────────────────────
 
-  const [openCategory, setOpenCategory] = useState('burgers');
+  const [openCategory, setOpenCategory] = useState(null);
   const [cart, setCart] = useState([]);
   const [activeProduct, setActiveProduct] = useState(null);
   const [selectedMedallon, setSelectedMedallon] = useState(null);
