@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import {
   LogOut, Save, Plus, Trash2, ChevronDown, ChevronUp,
   Settings, UtensilsCrossed, MapPin, Layers, Eye, EyeOff,
-  AlertCircle, CheckCircle, Loader2, RefreshCw
+  AlertCircle, CheckCircle, Loader2, RefreshCw, Upload, Image
 } from 'lucide-react'
 
 // ─── Estilos base ──────────────────────────────────────────
@@ -136,6 +136,90 @@ function ConfigTab({ onToast }) {
 const THEMES = ['totem', 'azteca', 'maya', 'inca', 'ancestral', 'tribu']
 const MASKS  = ['totem', 'azteca', 'maya', 'inca', 'ancestral', 'tribu', 'fries', 'drink', 'beer']
 
+// ─── Componente de subida de imagen ────────────────────────
+function ImageUpload({ productId, currentUrl, onUploaded }) {
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState(currentUrl || null)
+  const inputRef = useRef()
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('Solo se permiten imágenes')
+      return
+    }
+
+    setUploading(true)
+    try {
+      // Preview local inmediato
+      const localUrl = URL.createObjectURL(file)
+      setPreview(localUrl)
+
+      // Subir a Supabase Storage
+      const ext = file.name.split('.').pop()
+      const path = `${productId}-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // Obtener URL pública
+      const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+      onUploaded(data.publicUrl)
+    } catch (err) {
+      alert('Error al subir la imagen: ' + err.message)
+      setPreview(currentUrl || null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <span style={{ ...label, display: 'block', marginBottom: '8px' }}>Foto del producto</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div
+          style={{
+            width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0,
+            background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(139,69,19,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          {preview
+            ? <img src={preview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <Image size={28} color="rgba(139,69,19,0.6)" />
+          }
+        </div>
+        <div style={{ flex: 1 }}>
+          <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+          <button
+            onClick={() => inputRef.current.click()}
+            disabled={uploading}
+            style={{
+              ...btnGhost,
+              width: '100%',
+              justifyContent: 'center',
+              opacity: uploading ? 0.6 : 1
+            }}
+          >
+            {uploading
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Subiendo...</>
+              : <><Upload size={14} /> {preview ? 'Cambiar foto' : 'Subir foto'}</>
+            }
+          </button>
+          {preview && (
+            <p style={{ fontSize: '11px', color: 'rgba(253,230,138,0.4)', marginTop: '4px', textAlign: 'center' }}>
+              ✓ Foto cargada
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProductRow({ product, categories, onSave, onDelete, onToggle }) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(product)
@@ -207,6 +291,11 @@ function ProductRow({ product, categories, onSave, onDelete, onToggle }) {
             <input type="checkbox" id={`med-${product.id}`} checked={form.has_medallon} onChange={e => setForm({ ...form, has_medallon: e.target.checked })} />
             <label htmlFor={`med-${product.id}`} style={{ color: '#d4a574', fontSize: '13px', cursor: 'pointer' }}>Tiene opción Veggie / Carne</label>
           </div>
+          <ImageUpload
+            productId={product.id}
+            currentUrl={form.image_url || null}
+            onUploaded={(url) => setForm({ ...form, image_url: url })}
+          />
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
             <button onClick={() => onDelete(product)} style={btnDanger}>
               <Trash2 size={14} /> Eliminar
@@ -283,6 +372,11 @@ function NewProductForm({ categories, onSave, onCancel }) {
         <input type="checkbox" id="new-med" checked={form.has_medallon} onChange={e => setForm({ ...form, has_medallon: e.target.checked })} />
         <label htmlFor="new-med" style={{ color: '#d4a574', fontSize: '13px', cursor: 'pointer' }}>Tiene opción Veggie / Carne</label>
       </div>
+      <ImageUpload
+        productId={form.id || 'nuevo-producto'}
+        currentUrl={form.image_url || null}
+        onUploaded={(url) => setForm({ ...form, image_url: url })}
+      />
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
         <button onClick={onCancel} style={btnGhost}>Cancelar</button>
         <button onClick={handleSave} disabled={saving || !form.name.trim() || !form.id.trim()} style={{ ...btnPrimary, opacity: (!form.name.trim() || !form.id.trim()) ? 0.5 : 1 }}>

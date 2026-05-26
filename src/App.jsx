@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, ChevronDown, Clock, MapPin, Instagram, X, Plus, Minus, Trash2, Beef, Leaf, Check, Send, AlertCircle, Copy, Loader2 } from 'lucide-react';
-import logoSrc from './assets/logo.jpg';
+import logoSrc from './assets/logo.webp';
+import imgAncestral from './assets/ancestral.webp';
+import imgIncaGold from './assets/inca-gold.webp';
+import imgMaya from './assets/maya.webp';
+import imgTotem from './assets/totem.webp';
+import imgTribu from './assets/tribu.webp';
+
+const productImages = {
+  'ancestral': imgAncestral,
+  'inca-gold': imgIncaGold,
+  'maya':      imgMaya,
+  'totem':     imgTotem,
+  'tribu':     imgTribu,
+};
 import { supabase } from './lib/supabase';
 import {
   defaultConfig, defaultCategories, defaultProducts, defaultExtras, defaultZones,
@@ -468,14 +481,21 @@ function Hero() {
 // PRODUCT CARD
 // ═══════════════════════════════════════════════════════════
 
-function ProductCard({ product, onSelect, cartCount = 0, onAdd, onRemove }) {
+function ProductCard({ product, onSelect, onDrinkVariant, cartCount = 0, onAdd, onRemove }) {
   const t = themes[product.theme];
   const isBurger = product.hasMedallon;
+  const hasDrinkVariants = !isBurger && !!DRINK_VARIANTS[product.id];
+  const isClickable = isBurger || hasDrinkVariants;
+
+  const handleClick = () => {
+    if (isBurger) onSelect(product);
+    else if (hasDrinkVariants) onDrinkVariant(product);
+  };
 
   return (
     <div
-      onClick={isBurger ? () => onSelect(product) : undefined}
-      className={`group relative rounded-lg overflow-hidden transition-all duration-300 ${isBurger ? 'cursor-pointer hover:scale-[1.015] active:scale-[0.99]' : ''}`}
+      onClick={isClickable ? handleClick : undefined}
+      className={`group relative rounded-lg overflow-hidden transition-all duration-300 ${isClickable ? 'cursor-pointer hover:scale-[1.015] active:scale-[0.99]' : ''}`}
       style={{
         background: `linear-gradient(135deg, ${t.deep} 0%, #0a0604 100%)`,
         boxShadow: `inset 0 0 0 1px ${t.accent}33, 0 4px 20px -8px ${t.glow}`
@@ -493,16 +513,28 @@ function ProductCard({ product, onSelect, cartCount = 0, onAdd, onRemove }) {
       />
       <div className="relative flex gap-4 p-4">
         <div
-          className="flex-shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-md flex items-center justify-center relative"
+          className="flex-shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-md overflow-hidden relative"
           style={{
             background: `radial-gradient(circle, ${t.deep} 0%, #000 100%)`,
             border: `1.5px solid ${t.accent}55`
           }}
         >
-          <div className="absolute inset-1 rounded" style={{ border: `1px solid ${t.accent}22` }} />
-          <div className="w-[85%] h-[85%] relative">
-            <MaskFor type={product.maskType} color={t.accent} />
-          </div>
+          {(productImages[product.id] || product.image_url) ? (
+            <img
+              src={productImages[product.id] || product.image_url}
+              alt={product.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <>
+              <div className="absolute inset-1 rounded" style={{ border: `1px solid ${t.accent}22` }} />
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-[85%] h-[85%]">
+                  <MaskFor type={product.maskType} color={t.accent} />
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
           <div>
@@ -526,6 +558,15 @@ function ProductCard({ product, onSelect, cartCount = 0, onAdd, onRemove }) {
             <p className="text-[11px] md:text-xs text-amber-100/55 mt-2 leading-relaxed">
               {product.description}
             </p>
+            {isBurger && (
+              <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(139,69,19,0.25)', border: '1px solid rgba(139,69,19,0.5)' }}>
+                <span style={{ fontSize: '10px' }}>🍟</span>
+                <span className="text-[10px] font-bold tracking-wide" style={{ color: '#d4a574' }}>
+                  Incluye papas fritas
+                </span>
+              </div>
+            )}
           </div>
           <div className="mt-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -536,7 +577,7 @@ function ProductCard({ product, onSelect, cartCount = 0, onAdd, onRemove }) {
                 {product.basePrice > 0 ? formatPrice(product.basePrice) : 'Consultar'}
               </span>
             </div>
-            {!isBurger && (
+            {!isBurger && !hasDrinkVariants && (
               <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                 {cartCount > 0 && (
                   <>
@@ -620,7 +661,7 @@ function CategoryBanner({ name, color, isOpen, onToggle }) {
   );
 }
 
-function Category({ category, isOpen, onToggle, onSelectProduct, cartItems, onAdd, onRemove }) {
+function Category({ category, isOpen, onToggle, onSelectProduct, onDrinkVariant, cartItems, onAdd, onRemove }) {
   return (
     <div className="mb-3">
       <CategoryBanner name={category.name} color={category.bannerColor} isOpen={isOpen} onToggle={onToggle} />
@@ -631,6 +672,7 @@ function Category({ category, isOpen, onToggle, onSelectProduct, cartItems, onAd
               key={p.id}
               product={p}
               onSelect={onSelectProduct}
+              onDrinkVariant={onDrinkVariant}
               cartCount={cartItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantity, 0)}
               onAdd={() => onAdd(p)}
               onRemove={() => onRemove(p)}
@@ -728,33 +770,91 @@ function Modal({ isOpen, onClose, children, title, subtitle }) {
 // VARIANT MODAL · Simple / Doble / Triple
 // ═══════════════════════════════════════════════════════════
 
-const BURGER_VARIANTS = [
-  { id: 'simple', label: 'SIMPLE', basePrice: 6500, surcharge: 0 },
-  { id: 'doble',  label: 'DOBLE',  basePrice: 7500, surcharge: 1000 },
-  { id: 'triple', label: 'TRIPLE', basePrice: 8500, surcharge: 2000 }
+// Surcharges dinámicos — se actualizan cuando carga Supabase
+const getBurgerVariants = () => [
+  { id: 'simple', label: 'SIMPLE', surcharge: 0 },
+  { id: 'doble',  label: 'DOBLE',  surcharge: _dynConfig.surcharge_doble ?? 1500 },
+  { id: 'triple', label: 'TRIPLE', surcharge: _dynConfig.surcharge_triple ?? 3000 }
 ];
+
+// Variantes de bebidas con precio propio
+const DRINK_VARIANTS = {
+  cervezas: [
+    { id: 'budweiser', label: 'BUDWEISER', price: 2500 },
+    { id: 'heineken',  label: 'HEINEKEN',  price: 3000 }
+  ],
+  gaseosas: [
+    { id: 'coca',   label: 'COCA-COLA', price: 1700 },
+    { id: 'sprite', label: 'SPRITE',    price: 1700 },
+    { id: 'pepsi',  label: 'PEPSI',     price: 1500 }
+  ],
+  dips: [
+    { id: 'mayonesa',  label: 'MAYONESA',         price: 700 },
+    { id: 'barbacoa',  label: 'BARBACOA',         price: 700 },
+    { id: 'ketchup',   label: 'KETCHUP',          price: 700 },
+    { id: 'sabora',    label: 'SABORA',           price: 700 },
+    { id: 'tasty',     label: 'SALSA TASTY',      price: 700 },
+    { id: 'alioli',    label: 'ALIOLI',           price: 700 },
+    { id: 'mayochimi', label: 'MAYO CHIMICHURRI', price: 700 },
+    { id: 'cheddar',   label: 'CHEDDAR',          price: 700 }
+  ]
+};
 
 function VariantModal({ product, isOpen, onClose, onSelect }) {
   if (!product) return null;
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="ELEGÍ EL TAMAÑO" subtitle={product.name}>
       <div className="p-5 pt-2 space-y-3">
-        {BURGER_VARIANTS.map((v) => (
+        {getBurgerVariants().map((v) => {
+          const price = product.basePrice + v.surcharge;
+          return (
+            <button
+              key={v.id}
+              onClick={() => onSelect({ ...v, basePrice: price })}
+              className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)',
+                border: '1.5px solid rgba(217,119,6,0.6)',
+                boxShadow: '0 4px 20px -6px rgba(232,168,48,0.4), inset 0 1px 0 rgba(232,168,48,0.3)'
+              }}
+            >
+              <span className="text-xl tracking-wide" style={{ fontFamily: "'Alfa Slab One', serif", color: '#fde68a' }}>
+                {v.label}
+              </span>
+              <span className="text-xl font-bold" style={{ fontFamily: "'Alfa Slab One', serif", color: '#fbbf24' }}>
+                {formatPrice(price)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+function DrinkVariantModal({ product, isOpen, onClose, onSelect }) {
+  if (!product) return null;
+  const variants = DRINK_VARIANTS[product.id] || [];
+  const t = themes[product.theme] || themes.inca;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={product.name} subtitle="Elegí tu opción">
+      <div className="p-5 pt-2 space-y-3">
+        {variants.map((v) => (
           <button
             key={v.id}
             onClick={() => onSelect(v)}
             className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)',
-              border: '1.5px solid rgba(217,119,6,0.6)',
-              boxShadow: '0 4px 20px -6px rgba(232,168,48,0.4), inset 0 1px 0 rgba(232,168,48,0.3)'
+              background: `linear-gradient(135deg, ${t.deep} 0%, #0a0604 100%)`,
+              border: `1.5px solid ${t.accent}88`,
+              boxShadow: `0 4px 20px -6px ${t.glow}, inset 0 1px 0 ${t.accent}33`
             }}
           >
-            <span className="text-xl tracking-wide" style={{ fontFamily: "'Alfa Slab One', serif", color: '#fde68a' }}>
+            <span className="text-lg tracking-wide" style={{ fontFamily: "'Alfa Slab One', serif", color: t.label }}>
               {v.label}
             </span>
-            <span className="text-xl font-bold" style={{ fontFamily: "'Alfa Slab One', serif", color: '#fbbf24' }}>
-              {formatPrice(v.basePrice)}
+            <span className="text-lg font-bold" style={{ fontFamily: "'Alfa Slab One', serif", color: t.label }}>
+              {formatPrice(v.price)}
             </span>
           </button>
         ))}
@@ -902,10 +1002,8 @@ function ExtrasModal({ product, medallon, isOpen, onClose, onConfirm }) {
 // CHECKOUT MODAL · datos del cliente + envío por WhatsApp
 // ═══════════════════════════════════════════════════════════
 
-function buildWhatsAppMessage({ customer, cart, zone, payment, cashAmount }) {
-  const deliveryFee = zone?.price || 0;
-  const subtotalItems = cart.reduce((s, i) => s + itemSubtotal(i), 0);
-  const total = subtotalItems + deliveryFee;
+function buildWhatsAppMessage({ customer, cart, payment, cashAmount, generalNotes }) {
+  const total = cart.reduce((s, i) => s + itemSubtotal(i), 0);
 
   const L = [];
   L.push('*🔥 PEDIDO · TRIBU BURGER 🔥*');
@@ -922,8 +1020,6 @@ function buildWhatsAppMessage({ customer, cart, zone, payment, cashAmount }) {
     L.push(`_Alias: ${_dynConfig?.bank_alias}_`);
   }
   L.push('');
-  L.push(`*Zona de entrega:* ${zone.name} (${formatPrice(zone.price)})`);
-  L.push('');
   L.push('*── PEDIDO ──*');
   cart.forEach((item) => {
     const desc = describeItem(item);
@@ -934,8 +1030,6 @@ function buildWhatsAppMessage({ customer, cart, zone, payment, cashAmount }) {
     }
   });
   L.push('');
-  L.push(`*Subtotal:* ${formatPrice(subtotalItems)}`);
-  L.push(`*Envío:* ${formatPrice(deliveryFee)}`);
   L.push(`*TOTAL: ${formatPrice(total)}*`);
 
   if (generalNotes && generalNotes.trim()) {
@@ -968,7 +1062,7 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
-  const [zoneId, setZoneId] = useState(null);
+
   const [payment, setPayment] = useState(null);
   const [cashAmount, setCashAmount] = useState('');
   const [errors, setErrors] = useState({});
@@ -982,10 +1076,7 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
     }
   }, [isOpen]);
 
-  const zone = _dynZones?.find((z) => z.id === zoneId);
-  const subtotalItems = cart.reduce((s, i) => s + itemSubtotal(i), 0);
-  const deliveryFee = zone?.price || 0;
-  const total = subtotalItems + deliveryFee;
+  const total = cart.reduce((s, i) => s + itemSubtotal(i), 0);
 
   const validate = () => {
     const e = {};
@@ -993,7 +1084,6 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
     if (!address.trim()) e.address = 'Completá tu dirección';
     if (!phone.trim()) e.phone = 'Completá tu teléfono';
     else if (!/^\d[\d\s-]{6,}$/.test(phone.trim())) e.phone = 'Teléfono inválido';
-    if (!zoneId) e.zone = 'Elegí la zona de entrega';
     if (!payment) e.payment = 'Elegí la forma de pago';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -1004,13 +1094,15 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
     const message = buildWhatsAppMessage({
       customer: { name: name.trim(), address: address.trim(), phone: phone.trim() },
       cart,
-      zone,
       payment,
       cashAmount: cashAmount.trim(),
       generalNotes
     });
-    const url = `https://wa.me/${_dynConfig.whatsapp}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    const waNumber = (_dynConfig.whatsapp && _dynConfig.whatsapp !== '5493420000000')
+      ? _dynConfig.whatsapp
+      : '5493426516104';
+    const url = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
     onSuccess();
   };
 
@@ -1061,38 +1153,6 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
             style={inputStyle}
             placeholder="Ej: 3426264360"
           />
-        </FormField>
-
-        <FormField label="Zona de entrega" required error={errors.zone}>
-          <div className="grid grid-cols-3 gap-2">
-            {_dynZones.map((z) => {
-              const active = z.id === zoneId;
-              return (
-                <button
-                  key={z.id}
-                  onClick={() => setZoneId(z.id)}
-                  className="p-3 rounded-md text-center transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{
-                    background: active
-                      ? 'linear-gradient(135deg, #78350f 0%, #451a03 100%)'
-                      : 'rgba(0,0,0,0.4)',
-                    border: `1.5px solid ${active ? '#d97706' : 'rgba(139,69,19,0.4)'}`,
-                    boxShadow: active ? '0 4px 15px -4px rgba(217,119,6,0.5)' : 'none'
-                  }}
-                >
-                  <div
-                    className="text-sm font-bold tracking-wider"
-                    style={{ fontFamily: "'Alfa Slab One', serif", color: active ? '#fde68a' : '#d4a574' }}
-                  >
-                    {z.name.replace('Zona ', '')}
-                  </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: active ? '#fbbf24' : '#78350f' }}>
-                    +{formatPrice(z.price)}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </FormField>
 
         <FormField label="Forma de pago" required error={errors.payment}>
@@ -1169,21 +1229,11 @@ function CheckoutModal({ isOpen, onClose, cart, onSuccess, generalNotes }) {
           borderTop: '1px solid rgba(139,69,19,0.3)'
         }}
       >
-        <div className="space-y-1 mb-3 text-sm">
-          <div className="flex justify-between text-amber-200/60">
-            <span>Subtotal</span>
-            <span>{formatPrice(subtotalItems)}</span>
-          </div>
-          <div className="flex justify-between text-amber-200/60">
-            <span>Envío</span>
-            <span>{zone ? formatPrice(deliveryFee) : '—'}</span>
-          </div>
-          <div className="flex justify-between pt-1.5 border-t border-amber-900/40">
-            <span className="text-xs uppercase tracking-widest text-amber-700 font-bold self-end pb-1">Total</span>
-            <span className="text-2xl font-bold" style={{ fontFamily: "'Alfa Slab One', serif", color: '#fde68a' }}>
-              {formatPrice(total)}
-            </span>
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs uppercase tracking-widest text-amber-700 font-bold">Total del pedido</span>
+          <span style={{ fontFamily: "'Karla', sans-serif", fontWeight: 800, fontSize: '26px', color: '#fde68a' }}>
+            {formatPrice(total)}
+          </span>
         </div>
         <button
           onClick={handleSubmit}
@@ -1554,10 +1604,15 @@ export default function App() {
     setActiveProduct(product);
     if (product.hasMedallon) {
       setFlowStep('medallon');
-    } else {
-      // Sides / drinks: directo al carrito
-      addToCart(product, null, []);
+    } else if (DRINK_VARIANTS[product.id]) {
+      setFlowStep('drinkVariant');
     }
+    // Sides simples: manejados por handleAddSimple/handleRemoveSimple
+  };
+
+  const handleSelectDrinkVariant = (drinkVariant) => {
+    addToCart(activeProduct, null, [], '', drinkVariant);
+    resetFlow();
   };
 
   const handleSelectVariant = (variant) => {
@@ -1570,15 +1625,16 @@ export default function App() {
     resetFlow();
   };
 
-  const addToCart = (product, variant, extras, notes = '') => {
+  const addToCart = (product, variant, extras, notes = '', drinkVariant = null) => {
+    const effectivePrice = drinkVariant ? drinkVariant.price : product.basePrice;
     const cartItem = {
       cartId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       productId: product.id,
       name: product.name,
       theme: product.theme,
       maskType: product.maskType,
-      basePrice: product.basePrice,
-      variantLabel: variant?.label || null,
+      basePrice: effectivePrice,
+      variantLabel: drinkVariant?.label || variant?.label || null,
       variantSurcharge: variant?.surcharge || 0,
       extras,
       quantity: 1,
@@ -1676,6 +1732,7 @@ export default function App() {
               isOpen={openCategory === cat.id}
               onToggle={() => setOpenCategory(openCategory === cat.id ? null : cat.id)}
               onSelectProduct={handleSelectProduct}
+              onDrinkVariant={handleSelectProduct}
               cartItems={cart}
               onAdd={handleAddSimple}
               onRemove={handleRemoveSimple}
@@ -1692,6 +1749,13 @@ export default function App() {
         isOpen={flowStep === 'medallon'}
         onClose={resetFlow}
         onSelect={handleSelectVariant}
+      />
+
+      <DrinkVariantModal
+        product={activeProduct}
+        isOpen={flowStep === 'drinkVariant'}
+        onClose={resetFlow}
+        onSelect={handleSelectDrinkVariant}
       />
 
       <ExtrasModal

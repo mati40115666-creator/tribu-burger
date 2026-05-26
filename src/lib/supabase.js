@@ -1,18 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = 'https://jhfyfdllfzxtciibsfri.supabase.co'
+const supabaseKey = 'sb_publishable_Q6pe_RH2AwtkbZGDz2uu2w_JrVcQ6qo'
 
-let supabaseClient = null
-
-if (supabaseUrl && supabaseKey) {
-  try {
-    supabaseClient = createClient(supabaseUrl, supabaseKey)
-  } catch (e) {
-    console.error('Error inicializando Supabase:', e)
-  }
-} else {
-  console.warn('Variables de entorno de Supabase no configuradas. Usando datos por defecto.')
-}
-
-export const supabase = supabaseClient
+export const supabase = createClient(supabaseUrl, supabaseKey)
